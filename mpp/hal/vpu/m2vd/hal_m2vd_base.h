@@ -67,7 +67,7 @@ typedef struct M2vdHalCtx_t {
     MppBuffer        qp_table;
     RK_U32           dec_frame_cnt;
     IOInterruptCB    int_cb;
-    MppDevCtx        dev_ctx;
+    MppDev        dev_ctx;
     FILE             *fp_reg_in;
     FILE             *fp_reg_out;
     RK_U32           reg_len;

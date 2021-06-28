@@ -556,9 +556,9 @@ static MPP_RET try_proc_dec_task(Mpp *mpp, DecTask *task)
             mpp_log("input packet pts %lld\n",
                     mpp_packet_get_pts(dec->mpp_pkt_in));
 
-        mpp_timer_start(dec->timers[DEC_PRS_PREPARE]);
+        mpp_clock_start(dec->timers[DEC_PRS_PREPARE]);
         mpp_parser_prepare(dec->parser, dec->mpp_pkt_in, task_dec);
-        mpp_timer_pause(dec->timers[DEC_PRS_PREPARE]);
+        mpp_clock_pause(dec->timers[DEC_PRS_PREPARE]);
 
         if (0 == mpp_packet_get_length(dec->mpp_pkt_in)) {
             mpp_packet_deinit(&dec->mpp_pkt_in);
@@ -685,9 +685,9 @@ static MPP_RET try_proc_dec_task(Mpp *mpp, DecTask *task)
      *    4. detect whether output index has MppBuffer and task valid
      */
     if (!task->status.task_parsed_rdy) {
-        mpp_timer_start(dec->timers[DEC_PRS_PARSE]);
+        mpp_clock_start(dec->timers[DEC_PRS_PARSE]);
         mpp_parser_parse(dec->parser, task_dec);
-        mpp_timer_pause(dec->timers[DEC_PRS_PARSE]);
+        mpp_clock_pause(dec->timers[DEC_PRS_PARSE]);
         task->status.task_parsed_rdy = 1;
     }
 
@@ -793,14 +793,14 @@ static MPP_RET try_proc_dec_task(Mpp *mpp, DecTask *task)
         return MPP_NOK;
 
     /* generating registers table */
-    mpp_timer_start(dec->timers[DEC_HAL_GEN_REG]);
+    mpp_clock_start(dec->timers[DEC_HAL_GEN_REG]);
     mpp_hal_reg_gen(dec->hal, &task->info);
-    mpp_timer_pause(dec->timers[DEC_HAL_GEN_REG]);
+    mpp_clock_pause(dec->timers[DEC_HAL_GEN_REG]);
 
     /* send current register set to hardware */
-    mpp_timer_start(dec->timers[DEC_HW_START]);
+    mpp_clock_start(dec->timers[DEC_HW_START]);
     mpp_hal_hw_start(dec->hal, &task->info);
-    mpp_timer_pause(dec->timers[DEC_HW_START]);
+    mpp_clock_pause(dec->timers[DEC_HW_START]);
 
     /*
      * 12. send dxva output information and buffer information to hal thread
@@ -834,7 +834,7 @@ void *mpp_dec_parser_thread(void *data)
 
     dec_task_init(&task);
 
-    mpp_timer_start(dec->timers[DEC_PRS_TOTAL]);
+    mpp_clock_start(dec->timers[DEC_PRS_TOTAL]);
 
     while (1) {
         {
@@ -850,9 +850,9 @@ void *mpp_dec_parser_thread(void *data)
              * 3. no buffer on analyzing output task
              */
             if (check_task_wait(dec, &task)) {
-                mpp_timer_start(dec->timers[DEC_PRS_WAIT]);
+                mpp_clock_start(dec->timers[DEC_PRS_WAIT]);
                 parser->wait();
-                mpp_timer_pause(dec->timers[DEC_PRS_WAIT]);
+                mpp_clock_pause(dec->timers[DEC_PRS_WAIT]);
             }
         }
 
@@ -867,12 +867,12 @@ void *mpp_dec_parser_thread(void *data)
 
         // NOTE: ignore return value here is to fast response to reset.
         // Otherwise we can loop all dec task until it is failed.
-        mpp_timer_start(dec->timers[DEC_PRS_PROC]);
+        mpp_clock_start(dec->timers[DEC_PRS_PROC]);
         try_proc_dec_task(mpp, &task);
-        mpp_timer_pause(dec->timers[DEC_PRS_PROC]);
+        mpp_clock_pause(dec->timers[DEC_PRS_PROC]);
     }
 
-    mpp_timer_pause(dec->timers[DEC_PRS_TOTAL]);
+    mpp_clock_pause(dec->timers[DEC_PRS_TOTAL]);
 
     mpp_dbg(MPP_DBG_INFO, "mpp_dec_parser_thread is going to exit\n");
     if (NULL != task.hnd && task_dec->valid) {
@@ -898,7 +898,7 @@ void *mpp_dec_hal_thread(void *data)
     HalTaskInfo task_info;
     HalDecTask  *task_dec = &task_info.dec;
 
-    mpp_timer_start(dec->timers[DEC_HAL_TOTAL]);
+    mpp_clock_start(dec->timers[DEC_HAL_TOTAL]);
 
     while (1) {
         /* hal thread wait for dxva interface intput first */
@@ -919,9 +919,9 @@ void *mpp_dec_hal_thread(void *data)
                 }
 
                 mpp_dec_notify(dec, MPP_DEC_NOTIFY_TASK_ALL_DONE);
-                mpp_timer_start(dec->timers[DEC_HAL_WAIT]);
+                mpp_clock_start(dec->timers[DEC_HAL_WAIT]);
                 hal->wait();
-                mpp_timer_pause(dec->timers[DEC_HAL_WAIT]);
+                mpp_clock_pause(dec->timers[DEC_HAL_WAIT]);
                 continue;
             }
         }
@@ -929,7 +929,7 @@ void *mpp_dec_hal_thread(void *data)
         if (task) {
             RK_U32 notify_flag = MPP_DEC_NOTIFY_TASK_HND_VALID;
 
-            mpp_timer_start(dec->timers[DEC_HAL_PROC]);
+            mpp_clock_start(dec->timers[DEC_HAL_PROC]);
             mpp->mTaskGetCount++;
 
             hal_task_hnd_get_info(task, &task_info);
@@ -947,7 +947,7 @@ void *mpp_dec_hal_thread(void *data)
                 hal_task_hnd_set_status(task, TASK_IDLE);
                 task = NULL;
                 mpp_dec_notify(dec, notify_flag);
-                mpp_timer_pause(dec->timers[DEC_HAL_PROC]);
+                mpp_clock_pause(dec->timers[DEC_HAL_PROC]);
                 continue;
             }
             /*
@@ -969,13 +969,13 @@ void *mpp_dec_hal_thread(void *data)
                 hal_task_hnd_set_status(task, TASK_IDLE);
                 task = NULL;
                 mpp_dec_notify(dec, notify_flag);
-                mpp_timer_pause(dec->timers[DEC_HAL_PROC]);
+                mpp_clock_pause(dec->timers[DEC_HAL_PROC]);
                 continue;
             }
 
-            mpp_timer_start(dec->timers[DEC_HW_WAIT]);
+            mpp_clock_start(dec->timers[DEC_HW_WAIT]);
             mpp_hal_hw_wait(dec->hal, &task_info);
-            mpp_timer_pause(dec->timers[DEC_HW_WAIT]);
+            mpp_clock_pause(dec->timers[DEC_HW_WAIT]);
 
             /*
              * when hardware decoding is done:
@@ -1010,11 +1010,11 @@ void *mpp_dec_hal_thread(void *data)
             mpp_dec_push_display(mpp, task_dec->flags);
 
             mpp_dec_notify(dec, notify_flag);
-            mpp_timer_pause(dec->timers[DEC_HAL_PROC]);
+            mpp_clock_pause(dec->timers[DEC_HAL_PROC]);
         }
     }
 
-    mpp_timer_pause(dec->timers[DEC_HAL_TOTAL]);
+    mpp_clock_pause(dec->timers[DEC_HAL_TOTAL]);
 
     mpp_assert(mpp->mTaskPutCount == mpp->mTaskGetCount);
     mpp_dbg(MPP_DBG_INFO, "mpp_dec_hal_thread exited\n");
@@ -1340,9 +1340,9 @@ MPP_RET mpp_dec_init(MppDec *dec, MppDecCfg *cfg)
         p->statistics_en        = (mpp_dec_debug & MPP_DEC_DBG_TIMING) ? 1 : 0;
 
         for (i = 0; i < DEC_TIMING_BUTT; i++) {
-            p->timers[i] = mpp_timer_get(timing_str[i]);
+            p->timers[i] = mpp_clock_get(timing_str[i]);
             mpp_assert(p->timers[i]);
-            mpp_timer_enable(p->timers[i], p->statistics_en);
+            mpp_clock_enable(p->timers[i], p->statistics_en);
         }
 
         sem_init(&p->parser_reset, 0, 0);
@@ -1375,20 +1375,20 @@ MPP_RET mpp_dec_deinit(MppDec ctx)
         for (i = 0; i < DEC_TIMING_BUTT; i++) {
             MppTimer timer = dec->timers[i];
             RK_S32 base = (i < DEC_HAL_TOTAL) ? (DEC_PRS_TOTAL) : (DEC_HAL_TOTAL);
-            RK_S64 time = mpp_timer_get_sum(timer);
-            RK_S64 total = mpp_timer_get_sum(dec->timers[base]);
+            RK_S64 time = mpp_clock_get_sum(timer);
+            RK_S64 total = mpp_clock_get_sum(dec->timers[base]);
 
             if (!time || !total)
                 continue;
 
             mpp_log("%p %s - %6.2f %-12lld avg %-12lld\n", dec,
-                    mpp_timer_get_name(timer), time * 100.0 / total, time,
-                    time / mpp_timer_get_count(timer));
+                    mpp_clock_get_name(timer), time * 100.0 / total, time,
+                    time / mpp_clock_get_count(timer));
         }
     }
 
     for (i = 0; i < DEC_TIMING_BUTT; i++) {
-        mpp_timer_put(dec->timers[i]);
+        mpp_clock_put(dec->timers[i]);
         dec->timers[i] = NULL;
     }
 

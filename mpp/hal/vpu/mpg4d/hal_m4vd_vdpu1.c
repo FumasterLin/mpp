@@ -257,16 +257,16 @@ MPP_RET vdpu1_mpg4d_init(void *hal, MppHalCfg *cfg)
         goto ERR_RET;
     }
 
-    MppDevCfg dev_cfg = {
-        .type = MPP_CTX_DEC,              /* type */
-        .coding = MPP_VIDEO_CodingMPEG4,  /* coding */
-        .platform = 0,                    /* platform */
-        .pp_enable = 0,                   /* pp_enable */
-    };
+    // MppDevCfg dev_cfg = {
+    //     .type = MPP_CTX_DEC,              /* type */
+    //     .coding = MPP_VIDEO_CodingMPEG4,  /* coding */
+    //     .platform = 0,                    /* platform */
+    //     .pp_enable = 0,                   /* pp_enable */
+    // };
 
-    ret = mpp_device_init(&ctx->dev_ctx, &dev_cfg);
+    ret = mpp_dev_init(&ctx->dev_ctx, VPU_CLIENT_VDPU1);
     if (ret) {
-        mpp_err_f("mpp_device_init failed. ret: %d\n", ret);
+        mpp_err_f("mpp_dev_init failed. ret: %d\n", ret);
         goto ERR_RET;
     }
 
@@ -352,9 +352,9 @@ MPP_RET vdpu1_mpg4d_deinit(void *hal)
     }
 
     if (ctx->dev_ctx) {
-        ret = mpp_device_deinit(ctx->dev_ctx);
+        ret = mpp_dev_deinit(ctx->dev_ctx);
         if (ret)
-            mpp_err("mpp_device_deinit failed ret: %d\n", ret);
+            mpp_err("mpp_dev_deinit failed ret: %d\n", ret);
     }
 
     return ret;
@@ -415,7 +415,37 @@ MPP_RET vdpu1_mpg4d_start(void *hal, HalTaskInfo *task)
         }
     }
 
-    ret = mpp_device_send_reg(ctx->dev_ctx, regs, reg_count);
+    do {
+        MppDevRegWrCfg wr_cfg;
+        MppDevRegRdCfg rd_cfg;
+        RK_U32 reg_size = sizeof(M4vdVdpu1Regs_t);
+
+        wr_cfg.reg = regs;
+        wr_cfg.size = reg_size;
+        wr_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_WR, &wr_cfg);
+        if (ret) {
+            mpp_err_f("set register write failed %d\n", ret);
+            break;
+        }
+
+        rd_cfg.reg = regs;
+        rd_cfg.size = reg_size;
+        rd_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_RD, &rd_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
+        ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_SEND, NULL);
+        if (ret) {
+            mpp_err_f("send cmd failed %d\n", ret);
+            break;
+        }
+    } while (0);
 
     (void)task;
     return ret;
@@ -429,7 +459,9 @@ MPP_RET vdpu1_mpg4d_wait(void *hal, HalTaskInfo *task)
     RK_U32* regs = (RK_U32 *)&reg_out;
     RK_U32 reg_count = (sizeof(reg_out) / sizeof(RK_U32));
 
-    ret = mpp_device_wait_reg(ctx->dev_ctx, regs, (sizeof(reg_out) / sizeof(RK_U32)));
+    ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_POLL, NULL);
+    if (ret)
+        mpp_err_f("poll cmd failed %d\n", ret);
 
     if (mpg4d_hal_debug & MPG4D_HAL_DBG_REG_GET) {
         RK_U32 i = 0;

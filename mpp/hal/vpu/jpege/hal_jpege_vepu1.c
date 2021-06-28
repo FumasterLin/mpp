@@ -59,16 +59,16 @@ MPP_RET hal_jpege_vepu1_init(void *hal, MppHalCfg *cfg)
 
     ctx->int_cb = cfg->hal_int_cb;
 
-    MppDevCfg dev_cfg = {
-        .type = MPP_CTX_ENC,              /* type */
-        .coding = MPP_VIDEO_CodingMJPEG,  /* coding */
-        .platform = 0,                    /* platform */
-        .pp_enable = 0,                   /* pp_enable */
-    };
+    // MppDevCfg dev_cfg = {
+    //     .type = MPP_CTX_ENC,              /* type */
+    //     .coding = MPP_VIDEO_CodingMJPEG,  /* coding */
+    //     .platform = 0,                    /* platform */
+    //     .pp_enable = 0,                   /* pp_enable */
+    // };
 
-    ret = mpp_device_init(&ctx->dev_ctx, &dev_cfg);
+    ret = mpp_dev_init(&ctx->dev_ctx, VPU_CLIENT_VEPU1);
     if (ret) {
-        mpp_err("mpp_device_init failed. ret: %d\n", ret);
+        mpp_err("mpp_dev_init failed. ret: %d\n", ret);
         return ret;
     }
 
@@ -102,9 +102,9 @@ MPP_RET hal_jpege_vepu1_deinit(void *hal)
     }
 
     if (ctx->dev_ctx) {
-        ret = mpp_device_deinit(ctx->dev_ctx);
+        ret = mpp_dev_deinit(ctx->dev_ctx);
         if (ret) {
-            mpp_err("mpp_device_deinit failed. ret: %d\n", ret);
+            mpp_err("mpp_dev_deinit failed. ret: %d\n", ret);
         }
     }
 
@@ -465,7 +465,38 @@ MPP_RET hal_jpege_vepu1_start(void *hal, HalTaskInfo *task)
     memcpy(cache + reg_num, &(ctx->ioctl_info.extra_info), extra_size);
 
     if (ctx->dev_ctx) {
-        ret = mpp_device_send_reg(ctx->dev_ctx, cache, reg_num + extra_num);
+        // ret = mpp_device_send_reg(ctx->dev_ctx, cache, reg_num + extra_num);
+        do {
+            MppDevRegWrCfg wr_cfg;
+            MppDevRegRdCfg rd_cfg;
+            RK_U32 reg_size = reg_size + extra_size;//ctx->reg_size;
+
+            wr_cfg.reg = cache;
+            wr_cfg.size = reg_size;
+            wr_cfg.offset = 0;
+
+            ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_WR, &wr_cfg);
+            if (ret) {
+                mpp_err_f("set register write failed %d\n", ret);
+                break;
+            }
+
+            rd_cfg.reg = cache;
+            rd_cfg.size = reg_size;
+            rd_cfg.offset = 0;
+
+            ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_RD, &rd_cfg);
+            if (ret) {
+                mpp_err_f("set register read failed %d\n", ret);
+                break;
+            }
+
+            ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_SEND, NULL);
+            if (ret) {
+                mpp_err_f("send cmd failed %d\n", ret);
+                break;
+            }
+        } while (0);
     }
 
     mpp_free(cache);
@@ -491,8 +522,7 @@ MPP_RET hal_jpege_vepu1_wait(void *hal, HalTaskInfo *task)
     hal_jpege_dbg_func("enter hal %p\n", hal);
 
     if (ctx->dev_ctx)
-        ret = mpp_device_wait_reg(ctx->dev_ctx, regs, sizeof(jpege_vepu1_reg_set) / sizeof(RK_U32));
-
+        ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_POLL, NULL);
     val = regs[1];
     hal_jpege_dbg_output("hw_status %08x\n", val);
     feedback.hw_status = val & 0x70;

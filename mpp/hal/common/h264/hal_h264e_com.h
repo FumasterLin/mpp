@@ -417,7 +417,7 @@ typedef struct H264eMbRcCtx_t {
 typedef struct H264eHalContext_t {
     MppHalApi                       api;
     IOInterruptCB                   int_cb;
-    MppDevCtx                       dev_ctx;
+    MppDev                       dev_ctx;
     h264e_feedback                  feedback;
     void                            *regs;
     void                            *ioctl_input;

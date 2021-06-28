@@ -35,7 +35,7 @@ typedef struct JpegeIocRegInfo_t {
 
 typedef struct hal_jpege_ctx_s {
     IOInterruptCB       int_cb;
-    MppDevCtx           dev_ctx;
+    MppDev           dev_ctx;
     JpegeBits           bits;
     JpegeIocRegInfo     ioctl_info;
 

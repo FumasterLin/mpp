@@ -86,6 +86,9 @@ MPP_RET hal_h264d_init(void *hal, MppHalCfg *cfg)
     H264dHalCtx_t *p_hal = (H264dHalCtx_t *)hal;
     VpuHardMode hard_mode = MODE_NULL;
     RK_U32 hard_platform = 0;
+    MppClientType type = VPU_CLIENT_BUTT;
+    RK_U32 hw_id = 0;
+    RK_U32 vcodec_type = mpp_get_vcodec_type();
 
     INP_CHECK(ret, NULL == p_hal);
     memset(p_hal, 0, sizeof(H264dHalCtx_t));
@@ -98,22 +101,21 @@ MPP_RET hal_h264d_init(void *hal, MppHalCfg *cfg)
     //!< choose hard mode
     {
         RK_U32 mode = 0;
-        RK_U32 vcodec_type = 0;
         mpp_env_get_u32("use_mpp_mode", &mode, 0);
-        vcodec_type = mpp_get_vcodec_type();
-        mpp_assert(vcodec_type & (HAVE_RKVDEC | HAVE_VPU1 | HAVE_VPU2));
+
         if ((mode <= RKVDEC_MODE) && (vcodec_type & HAVE_RKVDEC)) {
             hard_mode = RKVDEC_MODE;
-            hard_platform = HAVE_RKVDEC;
-        } else if (vcodec_type & HAVE_VPU1) {
+            type = VPU_CLIENT_RKVDEC;
+        } else if (vcodec_type & HAVE_VDPU1) {
             hard_mode = VDPU1_MODE;
-            hard_platform = HAVE_VPU1;
-        } else if (vcodec_type & HAVE_VPU2) {
+            type = VPU_CLIENT_VDPU1;
+        } else if (vcodec_type & HAVE_VDPU2) {
             hard_mode = VDPU2_MODE;
-            hard_platform = HAVE_VPU2;
+            type = VPU_CLIENT_VDPU2;
         }
-        H264D_DBG(H264D_DBG_HARD_MODE, "set_mode=%d, hw_spt=%08x, use_mode=%d\n",
-                  mode, vcodec_type, hard_mode);
+        hw_id = mpp_get_client_hw_id(type);
+        H264D_DBG(H264D_DBG_HARD_MODE, "hw_plat %08x mode %d hw_id %08x\n",
+                  vcodec_type, mode, hw_id);
     }
     switch (hard_mode) {
     case RKVDEC_MODE:
@@ -159,17 +161,17 @@ MPP_RET hal_h264d_init(void *hal, MppHalCfg *cfg)
 
     mpp_env_get_u32("rkv_h264d_debug", &rkv_h264d_hal_debug, 0);
 
-    //!< mpp_device_init
-    MppDevCfg dev_cfg = {
-        .type = MPP_CTX_DEC,            /* type */
-        .coding = MPP_VIDEO_CodingAVC,  /* coding */
-        .platform = hard_platform,      /* platform */
-        .pp_enable = 0,                 /* pp_enable */
-    };
+    //!< mpp_dev_init
+    // MppDevCfg dev_cfg = {
+    //     .type = MPP_CTX_DEC,            /* type */
+    //     .coding = MPP_VIDEO_CodingAVC,  /* coding */
+    //     .platform = hard_platform,      /* platform */
+    //     .pp_enable = 0,                 /* pp_enable */
+    // };
 
-    ret = mpp_device_init(&p_hal->dev_ctx, &dev_cfg);
+    ret = mpp_dev_init(&p_hal->dev_ctx, type);
     if (ret) {
-        mpp_err("mpp_device_init failed ret: %d\n", ret);
+        mpp_err("mpp_dev_init failed ret: %d\n", ret);
         goto __FAILED;
     }
 
@@ -201,11 +203,11 @@ MPP_RET hal_h264d_deinit(void *hal)
 
     FUN_CHECK(ret = p_hal->hal_api.deinit(hal));
 
-    //!< mpp_device_init
+    //!< mpp_dev_init
     if (p_hal->dev_ctx) {
-        ret = mpp_device_deinit(p_hal->dev_ctx);
+        ret = mpp_dev_deinit(p_hal->dev_ctx);
         if (ret)
-            mpp_err("mpp_device_deinit failed. ret: %d\n", ret);
+            mpp_err("mpp_dev_deinit failed. ret: %d\n", ret);
     }
 
     if (p_hal->buf_group) {

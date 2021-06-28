@@ -105,7 +105,7 @@ static RK_S32 mpp_device_set_client_type(int dev, RK_S32 client_type)
     return ret;
 }
 
-static RK_S32 mpp_device_get_client_type(MppDevCtx ctx, MppCtxType type, MppCodingType coding)
+static RK_S32 mpp_device_get_client_type(MppDev ctx, MppCtxType type, MppCodingType coding)
 {
     RK_S32 client_type = -1;
     MppDevCtxImpl *p;
@@ -131,7 +131,7 @@ static RK_S32 mpp_device_get_client_type(MppDevCtx ctx, MppCtxType type, MppCodi
     return client_type;
 }
 
-MPP_RET mpp_device_init(MppDevCtx *ctx, MppDevCfg *cfg)
+MPP_RET mpp_dev_init(MppDev *ctx, MppDevCfg *cfg)
 {
     RK_S32 dev = -1;
     const char *name = NULL;
@@ -184,7 +184,7 @@ MPP_RET mpp_device_init(MppDevCtx *ctx, MppDevCfg *cfg)
     return MPP_OK;
 }
 
-MPP_RET mpp_device_deinit(MppDevCtx ctx)
+MPP_RET mpp_dev_deinit(MppDev ctx)
 {
     MppDevCtxImpl *p;
 
@@ -204,7 +204,7 @@ MPP_RET mpp_device_deinit(MppDevCtx ctx)
     return MPP_OK;
 }
 
-MPP_RET mpp_device_send_reg(MppDevCtx ctx, RK_U32 *regs, RK_U32 nregs)
+MPP_RET mpp_device_send_reg(MppDev ctx, RK_U32 *regs, RK_U32 nregs)
 {
     MPP_RET ret;
     MppReq req;
@@ -245,7 +245,7 @@ MPP_RET mpp_device_send_reg(MppDevCtx ctx, RK_U32 *regs, RK_U32 nregs)
     return ret;
 }
 
-MPP_RET mpp_device_wait_reg(MppDevCtx ctx, RK_U32 *regs, RK_U32 nregs)
+MPP_RET mpp_device_wait_reg(MppDev ctx, RK_U32 *regs, RK_U32 nregs)
 {
     MPP_RET ret;
     MppReq req;
@@ -293,7 +293,7 @@ MPP_RET mpp_device_wait_reg(MppDevCtx ctx, RK_U32 *regs, RK_U32 nregs)
     return ret;
 }
 
-MPP_RET mpp_device_send_reg_with_id(MppDevCtx ctx, RK_S32 id, void *param,
+MPP_RET mpp_device_send_reg_with_id(MppDev ctx, RK_S32 id, void *param,
                                     RK_S32 size)
 {
     MPP_RET ret = MPP_NOK;
@@ -316,7 +316,7 @@ MPP_RET mpp_device_send_reg_with_id(MppDevCtx ctx, RK_S32 id, void *param,
     return ret;
 }
 
-RK_S32 mpp_device_control(MppDevCtx ctx, MppDevCmd cmd, void* param)
+RK_S32 mpp_device_control(MppDev ctx, MppDevCmd cmd, void* param)
 {
     MppDevCtxImpl *p;
 

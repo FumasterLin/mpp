@@ -68,7 +68,7 @@ typedef struct h265d_reg_context {
     h265d_reg_buf_t g_buf[MAX_GEN_REG];
     RK_U32 fast_mode;
     IOInterruptCB int_cb;
-    MppDevCtx dev_ctx;
+    MppDev dev_ctx;
     RK_U32 fast_mode_err_found;
     void *scaling_rk;
     void *scaling_qm;
@@ -405,6 +405,8 @@ MPP_RET hal_h265d_init(void *hal, MppHalCfg *cfg)
 
     RK_S32 ret = 0;
     h265d_reg_context_t *reg_cxt = (h265d_reg_context_t *)hal;
+    MppClientType client_type = VPU_CLIENT_BUTT;
+    RK_U32 vcodec_type = mpp_get_vcodec_type();
 
     if (NULL == reg_cxt) {
         mpp_err("hal instan no alloc");
@@ -431,17 +433,19 @@ MPP_RET hal_h265d_init(void *hal, MppHalCfg *cfg)
     }
     reg_cxt->packet_slots = cfg->packet_slots;
 
-    ///<- mpp_device_init
-    MppDevCfg dev_cfg = {
-        .type = MPP_CTX_DEC,               /* type */
-        .coding = MPP_VIDEO_CodingHEVC,    /* coding */
-        .platform = 0,                     /* platform */
-        .pp_enable = 0,                    /* pp_enable */
-    };
+    ///<- mpp_dev_init
+    // MppDevCfg dev_cfg = {
+    //     .type = MPP_CTX_DEC,               /* type */
+    //     .coding = MPP_VIDEO_CodingHEVC,    /* coding */
+    //     .platform = 0,                     /* platform */
+    //     .pp_enable = 0,                    /* pp_enable */
+    // };
+    client_type = (vcodec_type & HAVE_HEVC_DEC) ?
+                  VPU_CLIENT_HEVC_DEC : VPU_CLIENT_RKVDEC;
 
-    ret = mpp_device_init(&reg_cxt->dev_ctx, &dev_cfg);
+    ret = mpp_dev_init(&reg_cxt->dev_ctx, client_type);
     if (ret) {
-        mpp_err("mpp_device_init failed. ret: %d\n", ret);
+        mpp_err("mpp_dev_init failed. ret: %d\n", ret);
         return ret;
     }
 
@@ -484,11 +488,11 @@ MPP_RET hal_h265d_deinit(void *hal)
     RK_S32 ret = 0;
     h265d_reg_context_t *reg_cxt = (h265d_reg_context_t *)hal;
 
-    ///<- mpp_device_init
+    ///<- mpp_dev_init
     if (reg_cxt->dev_ctx) {
-        ret = mpp_device_deinit(reg_cxt->dev_ctx);
+        ret = mpp_dev_deinit(reg_cxt->dev_ctx);
         if (ret)
-            mpp_err("mpp_device_deinit failed. ret: %d\n", ret);
+            mpp_err("mpp_dev_deinit failed. ret: %d\n", ret);
     }
 
     ret = mpp_buffer_put(reg_cxt->cabac_table_data);
@@ -1510,11 +1514,44 @@ MPP_RET hal_h265d_start(void *hal, HalTaskInfo *task)
     }
 
     // 68 is the nb of uint32_t
-    ret = mpp_device_send_reg(reg_cxt->dev_ctx, (RK_U32*)hw_regs, RKVDEC_HEVC_REGISTERS);
-    if (ret) {
-        mpp_err("RK_HEVC_DEC: ERROR: mpp_device_send_reg Failed!!!\n");
-        return MPP_ERR_VPUHW;
-    }
+    do {
+        MppDevRegWrCfg wr_cfg;
+        MppDevRegRdCfg rd_cfg;
+        RK_U32 reg_size = RKVDEC_HEVC_REGISTERS;
+
+        reg_size *= sizeof(RK_U32);
+
+        wr_cfg.reg = hw_regs;
+        wr_cfg.size = reg_size;
+        wr_cfg.offset = 0;
+
+        // if (hal_h265d_debug & H265H_DBG_REG) {
+        //     for (i = 0; i < reg_size / sizeof(RK_U32); i++)
+        //         h265h_dbg(H265H_DBG_REG, "RK_HEVC_DEC: regs[%02d]=%08X\n", i, ((RK_U32 *)hw_regs)[i]);
+        // }
+
+        ret = mpp_dev_ioctl(reg_cxt->dev_ctx, MPP_DEV_REG_WR, &wr_cfg);
+        if (ret) {
+            mpp_err_f("set register write failed %d\n", ret);
+            break;
+        }
+
+        rd_cfg.reg = hw_regs;
+        rd_cfg.size = reg_size;
+        rd_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(reg_cxt->dev_ctx, MPP_DEV_REG_RD, &rd_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
+        ret = mpp_dev_ioctl(reg_cxt->dev_ctx, MPP_DEV_CMD_SEND, NULL);
+        if (ret) {
+            mpp_err_f("send cmd failed %d\n", ret);
+            break;
+        }
+    } while (0);
 
     return ret;
 }
@@ -1543,7 +1580,9 @@ MPP_RET hal_h265d_wait(void *hal, HalTaskInfo *task)
 
     p = (RK_U8*)hw_regs;
 
-    ret = mpp_device_wait_reg(reg_cxt->dev_ctx, (RK_U32*)hw_regs, RKVDEC_HEVC_REGISTERS);
+    ret = mpp_dev_ioctl(reg_cxt->dev_ctx, MPP_DEV_CMD_POLL, NULL);
+    if (ret)
+        mpp_err_f("poll cmd failed %d\n", ret);
 ERR_PROC:
     if (task->dec.flags.parse_err ||
         task->dec.flags.ref_err ||

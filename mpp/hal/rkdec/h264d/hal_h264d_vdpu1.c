@@ -860,8 +860,37 @@ MPP_RET vdpu1_h264d_start(void *hal, HalTaskInfo *task)
     p_regs->SwReg57.sw_intra_dblspeed = 1;
     p_regs->SwReg57.sw_paral_bus = 1;
 
-    ret = mpp_device_send_reg(p_hal->dev_ctx, (RK_U32 *)reg_ctx->regs,
-                              DEC_VDPU1_REGISTERS);
+    do {
+        MppDevRegWrCfg wr_cfg;
+        MppDevRegRdCfg rd_cfg;
+        RK_U32 reg_size = DEC_VDPU1_REGISTERS * sizeof(RK_U32);
+
+        wr_cfg.reg = reg_ctx->regs;
+        wr_cfg.size = reg_size;
+        wr_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(p_hal->dev_ctx, MPP_DEV_REG_WR, &wr_cfg);
+        if (ret) {
+            mpp_err_f("set register write failed %d\n", ret);
+            break;
+        }
+
+        rd_cfg.reg = reg_ctx->regs;
+        rd_cfg.size = reg_size;
+        rd_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(p_hal->dev_ctx, MPP_DEV_REG_RD, &rd_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
+        ret = mpp_dev_ioctl(p_hal->dev_ctx, MPP_DEV_CMD_SEND, NULL);
+        if (ret) {
+            mpp_err_f("send cmd failed %d\n", ret);
+            break;
+        }
+    } while (0);
     if (ret) {
         ret =  MPP_ERR_VPUHW;
         mpp_err_f("H264 VDPU1 FlushRegs fail, pid %d. \n", getpid());
@@ -892,13 +921,9 @@ MPP_RET vdpu1_h264d_wait(void *hal, HalTaskInfo *task)
     }
 
     {
-        RK_S32 wait_ret = -1;
-        wait_ret = mpp_device_wait_reg(p_hal->dev_ctx, (RK_U32 *)reg_ctx->regs,
-                                       DEC_VDPU1_REGISTERS);
-        if (wait_ret) {
-            ret = MPP_ERR_VPUHW;
-            mpp_err("H264 VDPU1 wait result fail, pid=%d.\n", getpid());
-        }
+        ret = mpp_dev_ioctl(p_hal->dev_ctx, MPP_DEV_CMD_POLL, NULL);
+        if (ret)
+            mpp_err_f("poll cmd failed %d\n", ret);
     }
 
 __SKIP_HARD:

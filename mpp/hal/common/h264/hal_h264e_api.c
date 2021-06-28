@@ -58,7 +58,7 @@ MPP_RET hal_h264e_init(void *hal, MppHalCfg *cfg)
         api->flush   = hal_h264e_rkv_flush;
         api->control = hal_h264e_rkv_control;
         hw_cfg->hw_type = H264E_RKV;
-    } else if (vcodec_type & HAVE_VPU2) {
+    } else if (vcodec_type & HAVE_VEPU2) {
         api->init    = hal_h264e_vepu2_init;
         api->deinit  = hal_h264e_vepu2_deinit;
         api->reg_gen = hal_h264e_vepu2_gen_regs;
@@ -68,7 +68,7 @@ MPP_RET hal_h264e_init(void *hal, MppHalCfg *cfg)
         api->flush   = hal_h264e_vepu2_flush;
         api->control = hal_h264e_vepu2_control;
         hw_cfg->hw_type = H264E_VPU;
-    } else if (vcodec_type & HAVE_VPU1) {
+    } else if (vcodec_type & HAVE_VEPU1) {
         api->init = hal_h264e_vepu1_init;
         api->deinit  = hal_h264e_vepu1_deinit;
         api->reg_gen = hal_h264e_vepu1_gen_regs;

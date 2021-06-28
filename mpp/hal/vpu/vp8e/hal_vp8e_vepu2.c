@@ -304,19 +304,19 @@ MPP_RET hal_vp8e_vepu2_init(void *hal, MppHalCfg *cfg)
 
     hal_vp8e_init_qp_table(hal);
 
-    MppDevCfg dev_cfg = {
-        .type = MPP_CTX_ENC,            /* type */
-        .coding = MPP_VIDEO_CodingVP8,  /* coding */
-        .platform = 0,                  /* platform */
-        .pp_enable = 0,                 /* pp_enable */
-    };
+    // MppDevCfg dev_cfg = {
+    //     .type = MPP_CTX_ENC,            /* type */
+    //     .coding = MPP_VIDEO_CodingVP8,  /* coding */
+    //     .platform = 0,                  /* platform */
+    //     .pp_enable = 0,                 /* pp_enable */
+    // };
 
-    ret = mpp_device_init(&ctx->dev_ctx, &dev_cfg);
+    ret = mpp_dev_init(&ctx->dev_ctx, VPU_CLIENT_VEPU2);
 
     if (ret) {
-        mpp_err("mpp_device_init failed ret %d\n", ret);
+        mpp_err("mpp_dev_init failed ret %d\n", ret);
     } else {
-        vp8e_hal_dbg(VP8E_DBG_HAL_FUNCTION, "mpp_device_init success.\n");
+        vp8e_hal_dbg(VP8E_DBG_HAL_FUNCTION, "mpp_dev_init success.\n");
     }
     return ret;
 }
@@ -328,12 +328,12 @@ MPP_RET hal_vp8e_vepu2_deinit(void *hal)
 
     hal_vp8e_buf_free(ctx);
 
-    ret = mpp_device_deinit(&ctx->dev_ctx);
+    ret = mpp_dev_deinit(&ctx->dev_ctx);
 
     if (ret) {
-        mpp_err("mpp_device_deinit failed ret: %d\n", ret);
+        mpp_err("mpp_dev_deinit failed ret: %d\n", ret);
     } else {
-        vp8e_hal_dbg(VP8E_DBG_HAL_FUNCTION, "mpp_device_deinit success.\n");
+        vp8e_hal_dbg(VP8E_DBG_HAL_FUNCTION, "mpp_dev_deinit success.\n");
     }
 
     MPP_FREE(ctx->regs);
@@ -370,12 +370,44 @@ MPP_RET hal_vp8e_vepu2_start(void *hal, HalTaskInfo *task)
     MPP_RET ret = MPP_OK;
     HalVp8eCtx *ctx = (HalVp8eCtx *)hal;
 
-    ret = mpp_device_send_reg(ctx->dev_ctx, (RK_U32 *)ctx->regs, ctx->reg_size);
-    if (ret) {
-        mpp_err("failed to send regs to kernel!!!\n");
-    } else {
-        vp8e_hal_dbg(VP8E_DBG_HAL_FUNCTION, "mpp_device_send_reg success.\n");
-    }
+    // ret = mpp_device_send_reg(ctx->dev_ctx, (RK_U32 *)ctx->regs, ctx->reg_size);
+    // if (ret) {
+    //     mpp_err("failed to send regs to kernel!!!\n");
+    // } else {
+    //     vp8e_hal_dbg(VP8E_DBG_HAL_FUNCTION, "mpp_device_send_reg success.\n");
+    // }
+
+    do {
+        MppDevRegWrCfg wr_cfg;
+        MppDevRegRdCfg rd_cfg;
+        RK_U32 reg_size = ctx->reg_size * sizeof(RK_U32);
+
+        wr_cfg.reg = ctx->regs;
+        wr_cfg.size = reg_size;
+        wr_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_WR, &wr_cfg);
+        if (ret) {
+            mpp_err_f("set register write failed %d\n", ret);
+            break;
+        }
+
+        rd_cfg.reg = ctx->regs;
+        rd_cfg.size = reg_size;
+        rd_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_RD, &rd_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
+        ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_SEND, NULL);
+        if (ret) {
+            mpp_err_f("send cmd failed %d\n", ret);
+            break;
+        }
+    } while (0);
 
     if (VP8E_DBG_HAL_DUMP_REG & vp8e_hal_debug) {
         RK_U32 i = 0;
@@ -426,7 +458,7 @@ MPP_RET hal_vp8e_vepu2_wait(void *hal, HalTaskInfo *task)
         return MPP_NOK;
     }
 
-    ret = mpp_device_wait_reg(ctx->dev_ctx, (RK_U32 *)ctx->regs, ctx->reg_size);
+    ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_POLL, NULL);
     if (ret != MPP_OK) {
         mpp_err("hardware returns error:%d\n", ret);
         return ret;

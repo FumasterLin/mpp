@@ -28,14 +28,15 @@ MPP_RET h264e_rkv_set_osd_plt(H264eHalContext *ctx, void *param)
     h264e_hal_enter();
 
     if (plt->buf) {
-        MPP_RET ret = mpp_device_send_reg_with_id(ctx->dev_ctx,
-                                                  H264E_IOC_SET_OSD_PLT,
-                                                  param, sizeof(MppEncOSDPlt));
-        ctx->osd_plt_type = H264E_OSD_PLT_TYPE_USERDEF;
-        if (ret) {
-            h264e_hal_err("set osd plt error");
-            return MPP_NOK;
-        }
+        // MPP_RET ret = mpp_device_send_reg_with_id(ctx->dev_ctx,
+        //                                           H264E_IOC_SET_OSD_PLT,
+        //                                           param, sizeof(MppEncOSDPlt));
+        // ctx->osd_plt_type = H264E_OSD_PLT_TYPE_USERDEF;
+        // if (ret) {
+        //     h264e_hal_err("set osd plt error");
+        //     return MPP_NOK;
+        // }
+
     } else {
         ctx->osd_plt_type = H264E_OSD_PLT_TYPE_DEFAULT;
     }

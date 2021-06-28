@@ -56,15 +56,15 @@ MPP_RET hal_h264e_vepu2_init(void *hal, MppHalCfg *cfg)
 
     h264e_vpu_init_extra_info(ctx->extra_info);
 
-    MppDevCfg dev_cfg = {
-        .type = MPP_CTX_ENC,            /* type */
-        .coding = MPP_VIDEO_CodingAVC,  /* coding */
-        .platform = 0,                  /* platform */
-        .pp_enable = 0,                 /* pp_enable */
-    };
-    ret = mpp_device_init(&ctx->dev_ctx, &dev_cfg);
+    // MppDevCfg dev_cfg = {
+    //     .type = MPP_CTX_ENC,            /* type */
+    //     .coding = MPP_VIDEO_CodingAVC,  /* coding */
+    //     .platform = 0,                  /* platform */
+    //     .pp_enable = 0,                 /* pp_enable */
+    // };
+    ret = mpp_dev_init(&ctx->dev_ctx, VPU_CLIENT_VEPU2);
     if (ret) {
-        mpp_err("mpp_device_init failed. ret: %d\n", ret);
+        mpp_err("mpp_dev_init failed. ret: %d\n", ret);
         return ret;
     }
 
@@ -133,9 +133,9 @@ MPP_RET hal_h264e_vepu2_deinit(void *hal)
         mpp_linreg_deinit(ctx->mad);
         ctx->mad = NULL;
     }
-    ret = mpp_device_deinit(ctx->dev_ctx);
+    ret = mpp_dev_deinit(ctx->dev_ctx);
     if (ret)
-        mpp_err("mpp_device_deinit failed, ret: %d", ret);
+        mpp_err("mpp_dev_deinit failed, ret: %d", ret);
 
     h264e_hal_leave();
     return ret;
@@ -565,11 +565,42 @@ MPP_RET hal_h264e_vepu2_start(void *hal, HalTaskInfo *task)
     if (ctx->dev_ctx) {
         RK_U32 *p_regs = (RK_U32 *)ctx->regs;
         h264e_hal_dbg(H264E_DBG_DETAIL, "vpu client is sending %d regs", VEPU2_H264E_NUM_REGS);
-        ret = mpp_device_send_reg(ctx->dev_ctx, p_regs, VEPU2_H264E_NUM_REGS);
-        if (ret)
-            mpp_err("mpp_device_send_reg failed ret %d", ret);
-        else
-            h264e_hal_dbg(H264E_DBG_DETAIL, "mpp_device_send_reg success!");
+        // ret = mpp_device_send_reg(ctx->dev_ctx, p_regs, VEPU2_H264E_NUM_REGS);
+        // if (ret)
+        //     mpp_err("mpp_device_send_reg failed ret %d", ret);
+        // else
+        //     h264e_hal_dbg(H264E_DBG_DETAIL, "mpp_device_send_reg success!");
+
+        do {
+            MppDevRegWrCfg wr_cfg;
+            MppDevRegRdCfg rd_cfg;
+            RK_U32 reg_size = VEPU2_H264E_NUM_REGS * sizeof(RK_U32);
+            wr_cfg.reg = p_regs;
+            wr_cfg.size = reg_size;
+            wr_cfg.offset = 0;
+
+            ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_WR, &wr_cfg);
+            if (ret) {
+                mpp_err_f("set register write failed %d\n", ret);
+                break;
+            }
+
+            rd_cfg.reg = p_regs;
+            rd_cfg.size = reg_size;
+            rd_cfg.offset = 0;
+
+            ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_RD, &rd_cfg);
+            if (ret) {
+                mpp_err_f("set register read failed %d\n", ret);
+                break;
+            }
+
+            ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_SEND, NULL);
+            if (ret) {
+                mpp_err_f("send cmd failed %d\n", ret);
+                break;
+            }
+        } while (0);
     } else {
         mpp_err("invalid device ctx: %p", ctx->dev_ctx);
         ret = MPP_NOK;
@@ -635,13 +666,42 @@ static MPP_RET hal_h264e_vpu2_resend(void *hal, RK_U32 *reg_out, RK_S32 dealt_qp
     val |= VEPU_REG_SPLIT_MV_MODE_EN;
     H264E_HAL_SET_REG(p_regs, VEPU_REG_MV_PENALTY, val);
 
-    hw_ret = mpp_device_send_reg(ctx->dev_ctx, p_regs, VEPU2_H264E_NUM_REGS);
-    if (hw_ret)
-        mpp_err("mpp_device_send_reg failed ret %d", hw_ret);
-    else
-        h264e_hal_dbg(H264E_DBG_DETAIL, "mpp_device_send_reg success!");
+    // hw_ret = mpp_device_send_reg(ctx->dev_ctx, p_regs, VEPU2_H264E_NUM_REGS);
+    // if (hw_ret)
+    //     mpp_err("mpp_device_send_reg failed ret %d", hw_ret);
+    // else
+    //     h264e_hal_dbg(H264E_DBG_DETAIL, "mpp_device_send_reg success!");
+    do {
+        MppDevRegWrCfg wr_cfg;
+        MppDevRegRdCfg rd_cfg;
+        RK_U32 reg_size = VEPU2_H264E_NUM_REGS * sizeof(RK_U32);
+        wr_cfg.reg = p_regs;
+        wr_cfg.size = reg_size;
+        wr_cfg.offset = 0;
 
-    hw_ret = mpp_device_wait_reg(ctx->dev_ctx, (RK_U32 *)reg_out, VEPU2_H264E_NUM_REGS);
+        hw_ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_WR, &wr_cfg);
+        if (hw_ret) {
+            mpp_err_f("set register write failed %d\n", hw_ret);
+            break;
+        }
+
+        rd_cfg.reg = p_regs;
+        rd_cfg.size = reg_size;
+        rd_cfg.offset = 0;
+
+        hw_ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_RD, &rd_cfg);
+        if (hw_ret) {
+            mpp_err_f("set register read failed %d\n", hw_ret);
+            break;
+        }
+
+        hw_ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_SEND, NULL);
+        if (hw_ret) {
+            mpp_err_f("send cmd failed %d\n", hw_ret);
+            break;
+        }
+    } while (0);
+    hw_ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_POLL, NULL);
     if (hw_ret) {
         h264e_hal_err("hardware returns error:%d", hw_ret);
         return MPP_ERR_VPUHW;
@@ -854,8 +914,8 @@ MPP_RET reorganize_hwstream2tsvc(H264eHalContext *ctx, HalTaskInfo *task)
 MPP_RET hal_h264e_vepu2_wait(void *hal, HalTaskInfo *task)
 {
     H264eHalContext *ctx = (H264eHalContext *)hal;
-    H264eVpu2RegSet reg_out_tmp;
-    H264eVpu2RegSet *reg_out = &reg_out_tmp;
+    // H264eVpu2RegSet reg_out_tmp;
+    H264eVpu2RegSet *reg_out = (H264eVpu2RegSet*)ctx->regs;
     MppEncPrepCfg *prep = &ctx->set->prep;
     IOInterruptCB int_cb = ctx->int_cb;
     h264e_feedback *fb = &ctx->feedback;
@@ -863,12 +923,11 @@ MPP_RET hal_h264e_vepu2_wait(void *hal, HalTaskInfo *task)
     H264eHwCfg *hw_cfg = &ctx->hw_cfg;
     RK_S32 num_mb = MPP_ALIGN(prep->width, 16) * MPP_ALIGN(prep->height, 16) / 16 / 16;
 
-    memset(reg_out, 0, sizeof(H264eVpu2RegSet));
+    // memset(reg_out, 0, sizeof(H264eVpu2RegSet));
     h264e_hal_enter();
 
     if (ctx->dev_ctx) {
-        RK_S32 hw_ret = mpp_device_wait_reg(ctx->dev_ctx, (RK_U32 *)reg_out,
-                                            VEPU2_H264E_NUM_REGS);
+        RK_S32 hw_ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_POLL, NULL);
 
         h264e_hal_dbg(H264E_DBG_DETAIL, "mpp_device_wait_reg: ret %d\n", hw_ret);
 

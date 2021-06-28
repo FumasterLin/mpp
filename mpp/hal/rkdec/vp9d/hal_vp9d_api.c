@@ -83,7 +83,7 @@ typedef struct vp9d_reg_buf {
 typedef struct hal_vp9_context {
     MppBufSlots     slots;
     MppBufSlots     packet_slots;
-    MppDevCtx       dev_ctx;
+    MppDev       dev_ctx;
     MppBufferGroup group;
     vp9d_reg_buf_t g_buf[MAX_GEN_REG];
     MppBuffer probe_base;
@@ -275,17 +275,17 @@ MPP_RET hal_vp9d_init(void *hal, MppHalCfg *cfg)
     mpp_slots_set_prop(reg_cxt->slots, SLOTS_VER_ALIGN, vp9_ver_align);
     reg_cxt->packet_slots = cfg->packet_slots;
 
-    ///<- mpp_device_init
-    MppDevCfg dev_cfg = {
-        .type = MPP_CTX_DEC,              /* type */
-        .coding = MPP_VIDEO_CodingVP9,    /* coding */
-        .platform = 0,                    /* platform */
-        .pp_enable = 0,                   /* pp_enable */
-    };
+    ///<- mpp_dev_init
+    // MppDevCfg dev_cfg = {
+    //     .type = MPP_CTX_DEC,              /* type */
+    //     .coding = MPP_VIDEO_CodingVP9,    /* coding */
+    //     .platform = 0,                    /* platform */
+    //     .pp_enable = 0,                   /* pp_enable */
+    // };
 
-    ret = mpp_device_init(&reg_cxt->dev_ctx, &dev_cfg);
+    ret = mpp_dev_init(&reg_cxt->dev_ctx, VPU_CLIENT_RKVDEC);
     if (ret) {
-        mpp_err("mpp_device_init failed. ret: %d\n", ret);
+        mpp_err("mpp_dev_init failed. ret: %d\n", ret);
         return ret;
     }
 
@@ -330,9 +330,9 @@ MPP_RET hal_vp9d_deinit(void *hal)
     hal_vp9_context_t *reg_cxt = (hal_vp9_context_t *)hal;
 
     if (reg_cxt->dev_ctx) {
-        ret = mpp_device_deinit(reg_cxt->dev_ctx);
+        ret = mpp_dev_deinit(reg_cxt->dev_ctx);
         if (ret) {
-            mpp_err("mpp_device_deinit failed. ret: %d\n", ret);
+            mpp_err("mpp_dev_deinit failed. ret: %d\n", ret);
         }
     }
 
@@ -963,6 +963,7 @@ MPP_RET hal_vp9d_start(void *hal, HalTaskInfo *task)
     MPP_RET ret = MPP_OK;
     hal_vp9_context_t *reg_cxt = (hal_vp9_context_t *)hal;
     VP9_REGS *hw_regs = ( VP9_REGS *)reg_cxt->hw_regs;
+    MppDev dev = reg_cxt->dev_ctx;
 
     if (reg_cxt->fast_mode) {
         RK_S32 index =  task->dec.reg_index;
@@ -983,11 +984,37 @@ MPP_RET hal_vp9d_start(void *hal, HalTaskInfo *task)
         p += 4;
     }
 
-    ret = mpp_device_send_reg(reg_cxt->dev_ctx, (RK_U32*)hw_regs, sizeof(VP9_REGS) / 4); // 68 is the nb of uint32_t
-    if (ret) {
-        mpp_err("VP9H_DBG_REG: ERROR: mpp_device_send_reg Failed!!!\n");
-        return MPP_ERR_VPUHW;
-    }
+    do {
+        MppDevRegWrCfg wr_cfg;
+        MppDevRegRdCfg rd_cfg;
+        RK_U32 reg_size = sizeof(VP9_REGS);
+
+        wr_cfg.reg = hw_regs;
+        wr_cfg.size = reg_size;
+        wr_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(dev, MPP_DEV_REG_WR, &wr_cfg);
+        if (ret) {
+            mpp_err_f("set register write failed %d\n", ret);
+            break;
+        }
+
+        rd_cfg.reg = hw_regs;
+        rd_cfg.size = reg_size;
+        rd_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(dev, MPP_DEV_REG_RD, &rd_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
+        ret = mpp_dev_ioctl(dev, MPP_DEV_CMD_SEND, NULL);
+        if (ret) {
+            mpp_err_f("send cmd failed %d\n", ret);
+            break;
+        }
+    } while (0);
 
     (void)task;
     return ret;
@@ -1012,7 +1039,9 @@ MPP_RET hal_vp9d_wait(void *hal, HalTaskInfo *task)
         hw_regs = (VP9_REGS *)reg_cxt->hw_regs;
     }
 
-    ret = mpp_device_wait_reg(reg_cxt->dev_ctx, (RK_U32*)hw_regs, sizeof(VP9_REGS) / 4);
+    ret = mpp_dev_ioctl(reg_cxt->dev_ctx, MPP_DEV_CMD_POLL, NULL);
+    if (ret)
+        mpp_err_f("poll cmd failed %d\n", ret);
 
     RK_U32 *p = (RK_U32*)hw_regs;
     for (i = 0; i <  sizeof(VP9_REGS) / 4; i++) {

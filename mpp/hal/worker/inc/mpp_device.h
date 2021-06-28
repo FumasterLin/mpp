@@ -44,7 +44,7 @@ typedef struct MppDevCfg_t {
     RK_U32          pp_enable;
 } MppDevCfg;
 
-typedef void*   MppDevCtx;
+typedef void*   MppDev;
 
 #ifdef __cplusplus
 extern "C"
@@ -55,20 +55,20 @@ extern "C"
  * hardware device open function
  * coding and type for device name detection
  */
-MPP_RET mpp_device_init(MppDevCtx *ctx, MppDevCfg *cfg);
-MPP_RET mpp_device_deinit(MppDevCtx ctx);
+MPP_RET mpp_dev_init(MppDev *ctx, MppDevCfg *cfg);
+MPP_RET mpp_dev_deinit(MppDev ctx);
 
 /*
  * control function for set or get device property
  */
-RK_S32 mpp_device_control(MppDevCtx ctx, MppDevCmd cmd, void *param);
+RK_S32 mpp_device_control(MppDev ctx, MppDevCmd cmd, void *param);
 
 /*
  * register access interface
  */
-MPP_RET mpp_device_send_reg(MppDevCtx ctx, RK_U32 *regs, RK_U32 nregs);
-MPP_RET mpp_device_wait_reg(MppDevCtx ctx, RK_U32 *regs, RK_U32 nregs);
-MPP_RET mpp_device_send_reg_with_id(MppDevCtx ctx, RK_S32 id, void *param, RK_S32 size);
+MPP_RET mpp_device_send_reg(MppDev ctx, RK_U32 *regs, RK_U32 nregs);
+MPP_RET mpp_device_wait_reg(MppDev ctx, RK_U32 *regs, RK_U32 nregs);
+MPP_RET mpp_device_send_reg_with_id(MppDev ctx, RK_S32 id, void *param, RK_S32 size);
 
 #ifdef __cplusplus
 }

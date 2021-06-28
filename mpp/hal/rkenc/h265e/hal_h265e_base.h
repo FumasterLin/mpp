@@ -23,6 +23,7 @@
 #include "mpp_device.h"
 #include "mpp_hal.h"
 #include "rga_api.h"
+#include "hal_h265e_vepu22_def.h"
 
 extern RK_U32 hal_h265e_debug ;
 
@@ -42,7 +43,7 @@ extern RK_U32 hal_h265e_debug ;
 
 typedef struct hal_h265e_ctx {
     MppHalApi       hal_api;
-    MppDevCtx       dev_ctx;
+    MppDev       dev_ctx;
     MppBufferGroup  buf_grp;
 
     /*
@@ -79,6 +80,7 @@ typedef struct hal_h265e_ctx {
     RK_U32          user_cfg;
     void            *hw_cfg;
     IOInterruptCB   int_cb;
+    H265eVepu22Result result;
 
 
     MppEncCfgSet    *cfg;

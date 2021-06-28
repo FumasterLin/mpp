@@ -42,15 +42,15 @@ MPP_RET hal_m2vd_vdpu2_init(void *hal, MppHalCfg *cfg)
 
     p->reg_len = M2VD_VDPU2_REG_NUM;
 
-    MppDevCfg dev_cfg = {
-        .type = MPP_CTX_DEC,              /* type */
-        .coding = MPP_VIDEO_CodingMPEG2,  /* coding */
-        .platform = 0,                    /* platform */
-        .pp_enable = 0,                   /* pp_enable */
-    };
-    ret = mpp_device_init(&p->dev_ctx, &dev_cfg);
+    // MppDevCfg dev_cfg = {
+    //     .type = MPP_CTX_DEC,              /* type */
+    //     .coding = MPP_VIDEO_CodingMPEG2,  /* coding */
+    //     .platform = 0,                    /* platform */
+    //     .pp_enable = 0,                   /* pp_enable */
+    // };
+    ret = mpp_dev_init(&p->dev_ctx, VPU_CLIENT_VDPU2);
     if (ret) {
-        mpp_err("mpp_device_init failed. ret: %d\n", ret);
+        mpp_err("mpp_dev_init failed. ret: %d\n", ret);
         goto __ERR_RET;
     }
 
@@ -112,10 +112,10 @@ MPP_RET hal_m2vd_vdpu2_deinit(void *hal)
     M2vdHalCtx *p = (M2vdHalCtx *)hal;
 
     if (p->dev_ctx) {
-        ret = mpp_device_deinit(p->dev_ctx);
+        ret = mpp_dev_deinit(p->dev_ctx);
         p->dev_ctx = NULL;
         if (ret) {
-            mpp_err("mpp_device_deinit failed ret: %d\n", ret);
+            mpp_err("mpp_dev_deinit failed ret: %d\n", ret);
         }
     }
 
@@ -329,11 +329,38 @@ MPP_RET hal_m2vd_vdpu2_start(void *hal, HalTaskInfo *task)
 
     m2vh_dbg_func("FUN_I");
 
-    ret = mpp_device_send_reg(ctx->dev_ctx, p_regs, ctx->reg_len);
-    if (ret) {
-        mpp_err("mpp_device_send_reg Failed!!!\n");
-        return MPP_ERR_VPUHW;
-    }
+    do {
+        MppDevRegWrCfg wr_cfg;
+        MppDevRegRdCfg rd_cfg;
+        RK_U32 *regs = (RK_U32 *)ctx->regs;
+        RK_U32 reg_size = sizeof(M2vdVdpu2Reg);
+
+        wr_cfg.reg = regs;
+        wr_cfg.size = reg_size;
+        wr_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_WR, &wr_cfg);
+        if (ret) {
+            mpp_err_f("set register write failed %d\n", ret);
+            break;
+        }
+
+        rd_cfg.reg = regs;
+        rd_cfg.size = reg_size;
+        rd_cfg.offset = 0;
+
+        ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_RD, &rd_cfg);
+        if (ret) {
+            mpp_err_f("set register read failed %d\n", ret);
+            break;
+        }
+
+        ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_SEND, NULL);
+        if (ret) {
+            mpp_err_f("send cmd failed %d\n", ret);
+            break;
+        }
+    } while (0);
 
     (void)task;
     m2vh_dbg_func("FUN_O");
@@ -349,7 +376,9 @@ MPP_RET hal_m2vd_vdpu2_wait(void *hal, HalTaskInfo *task)
     m2vh_dbg_func("FUN_I");
 
     memset(&reg_out, 0, sizeof(M2vdVdpu2Reg));
-    ret = mpp_device_wait_reg(ctx->dev_ctx, (RK_U32 *)&reg_out, ctx->reg_len);
+    ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_POLL, NULL);
+    if (ret)
+        mpp_err_f("poll cmd failed %d\n", ret);
     if (ctx->fp_reg_out) {
         int k = 0;
         RK_U32 *p_reg = (RK_U32*)&reg_out;

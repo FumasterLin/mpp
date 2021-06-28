@@ -54,7 +54,7 @@ MPP_RET hal_h265e_init(void *hal, MppHalCfg *cfg)
         goto FAIL;
     }
 
-    if (!(mpp_get_vcodec_type() & HAVE_H265ENC)) {
+    if (!(mpp_get_vcodec_type() & HAVE_VEPU22)) {
         mpp_err("cannot find hardware.\n");
         ret = MPP_ERR_INIT;
         goto FAIL;
