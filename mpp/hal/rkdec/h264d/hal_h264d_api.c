@@ -85,7 +85,7 @@ MPP_RET hal_h264d_init(void *hal, MppHalCfg *cfg)
     MPP_RET ret = MPP_ERR_UNKNOW;
     H264dHalCtx_t *p_hal = (H264dHalCtx_t *)hal;
     VpuHardMode hard_mode = MODE_NULL;
-    RK_U32 hard_platform = 0;
+    // RK_U32 hard_platform = 0;
     MppClientType type = VPU_CLIENT_BUTT;
     RK_U32 hw_id = 0;
     RK_U32 vcodec_type = mpp_get_vcodec_type();

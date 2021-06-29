@@ -16,8 +16,6 @@
 #ifndef __HAL_JPEGD_VDPU1_REG_TABLE_H__
 #define __HAL_JPEGD_VDPU1_REG_TABLE_H__
 
-#include "mpp_device_patch.h"
-
 #define JPEGD_REG_NUM                       (101)
 
 #define DEC_VDPU1_LITTLE_ENDIAN             (1)

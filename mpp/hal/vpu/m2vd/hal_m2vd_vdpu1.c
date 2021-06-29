@@ -304,14 +304,13 @@ MPP_RET hal_m2vd_vdpu1_start(void *hal, HalTaskInfo *task)
 MPP_RET hal_m2vd_vdpu1_wait(void *hal, HalTaskInfo *task)
 {
     MPP_RET ret = MPP_OK;
-    M2vdVdpu1Reg_t reg_out;
     M2vdHalCtx *ctx = (M2vdHalCtx *)hal;
+    M2vdVdpu1Reg_t *reg_out = (M2vdVdpu1Reg_t*)ctx->regs;
 
-    memset(&reg_out, 0, sizeof(M2vdVdpu1Reg_t));
     ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_POLL, NULL);
     if (ret)
         mpp_err_f("poll cmd failed %d\n", ret);
-    if (reg_out.sw01.dec_error_int | reg_out.sw01.dec_buffer_int) {
+    if (reg_out->sw01.dec_error_int | reg_out->sw01.dec_buffer_int) {
         if (ctx->int_cb.callBack)
             ctx->int_cb.callBack(ctx->int_cb.opaque, NULL);
     }

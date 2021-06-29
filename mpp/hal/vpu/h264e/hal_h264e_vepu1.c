@@ -431,16 +431,6 @@ MPP_RET hal_h264e_vepu1_start(void *hal, HalTaskInfo *task)
     h264e_hal_enter();
 
     if (ctx->dev_ctx) {
-        // RK_U32 *p_regs = (RK_U32 *)ctx->regs;
-        // h264e_hal_dbg(H264E_DBG_DETAIL, "vpu client is sending %d regs",
-        //               VEPU_H264E_VEPU1_NUM_REGS);
-        // if (MPP_OK != mpp_device_send_reg(ctx->dev_ctx, p_regs,
-        //                                   VEPU_H264E_VEPU1_NUM_REGS)) {
-        //     mpp_err("mpp_device_send_reg Failed!!!");
-        //     return MPP_ERR_VPUHW;
-        // } else {
-        //     h264e_hal_dbg(H264E_DBG_DETAIL, "mpp_device_send_reg success!");
-        // }
 
         do {
             MppDevRegWrCfg wr_cfg;
@@ -513,6 +503,8 @@ static MPP_RET hal_h264e_vpu1_resend(void *hal, RK_U32 *reg_out, RK_S32 dealt_qp
     RK_U32 val = 0;
     RK_S32 hw_ret = 0;
     RK_U32 diff_mv_penalty[3] = {0};
+    (void)reg_out;
+
     hw_cfg->qp += dealt_qp;
     hw_cfg->qp = mpp_clip(hw_cfg->qp, hw_cfg->qp_min, hw_cfg->qp_max);
     val = VEPU_REG_H264_LUMA_INIT_QP(hw_cfg->qp)
@@ -532,12 +524,6 @@ static MPP_RET hal_h264e_vpu1_resend(void *hal, RK_U32 *reg_out, RK_S32 dealt_qp
 
     val |= VEPU_REG_SPLIT_MV_MODE_EN;
     H264E_HAL_SET_REG(p_regs, VEPU_REG_ENC_CTRL3, val);
-
-    // hw_ret = mpp_device_send_reg(ctx->dev_ctx, p_regs, VEPU_H264E_VEPU1_NUM_REGS);
-    // if (hw_ret)
-    //     mpp_err("mpp_device_send_reg failed ret %d", hw_ret);
-    // else
-    //     h264e_hal_dbg(H264E_DBG_DETAIL, "mpp_device_send_reg success!");
 
     do {
         MppDevRegWrCfg wr_cfg;
@@ -583,15 +569,16 @@ static MPP_RET hal_h264e_vpu1_resend(void *hal, RK_U32 *reg_out, RK_S32 dealt_qp
 MPP_RET hal_h264e_vepu1_wait(void *hal, HalTaskInfo *task)
 {
     H264eHalContext *ctx = (H264eHalContext *)hal;
-    h264e_vepu1_reg_set reg_out_tmp;
-    h264e_vepu1_reg_set *reg_out = &reg_out_tmp;
+    // h264e_vepu1_reg_set reg_out_tmp;
+    h264e_vepu1_reg_set *reg_out = (h264e_vepu1_reg_set*)ctx->regs;
     IOInterruptCB int_cb = ctx->int_cb;
     h264e_feedback *fb = &ctx->feedback;
     MppEncPrepCfg *prep = &ctx->set->prep;
     H264eHwCfg *hw_cfg = &ctx->hw_cfg;
     RK_S32 num_mb = MPP_ALIGN(prep->width, 16)
                     * MPP_ALIGN(prep->height, 16) / 16 / 16;
-    memset(reg_out, 0, sizeof(h264e_vepu1_reg_set));
+    RcSyntax *rc_syn = (RcSyntax *)task->enc.syntax.data;
+    // memset(reg_out, 0, sizeof(h264e_vepu1_reg_set));
 
     h264e_hal_enter();
 
@@ -634,6 +621,8 @@ MPP_RET hal_h264e_vepu1_wait(void *hal, HalTaskInfo *task)
 
         hw_cfg->qpCtrl.nonZeroCnt = fb->rlc_count;
         hw_cfg->qpCtrl.frameBitCnt = result.bits;
+        hw_cfg->pre_bit_diff = result.bits - syn->bit_target;
+        h264e_vpu_update_result(hw_cfg, result.bits, rc_syn->bit_target);
         if (syn->type == INTER_P_FRAME || syn->gop_mode == MPP_GOP_ALL_INTRA) {
             mpp_data_update(ctx->qp_p, avg_qp);
         }

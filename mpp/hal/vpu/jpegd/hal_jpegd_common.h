@@ -18,6 +18,7 @@
 #define __HAL_JPEGD_COMMON_H__
 
 #include "hal_jpegd_base.h"
+#include "mpp_platform.h"
 
 #define BRIGHTNESS                                  4    /* -128 ~ 127 */
 #define CONTRAST                                    0    /* -64 ~ 64 */
@@ -36,6 +37,19 @@
 #define PP_OUT_FORMAT_ARGB                          1
 #define PP_OUT_FORMAT_YUV422INTERLAVE               3
 #define PP_OUT_FORMAT_YUV420INTERLAVE               5
+
+#define EXTRA_INFO_MAGIC    (0x4C4A46)
+
+typedef struct RegPatchSlotInfo_t {
+    RK_U32          reg_idx;
+    RK_U32          offset;
+} RegPatchInfo;
+
+typedef struct RegExtraInfo_t {
+    RK_U32          magic;      // Fix magic value 0x4C4A46
+    RK_U32          count;      // valid patch info count
+    RegPatchInfo    patchs[5];
+} RegExtraInfo;
 
 static const RK_U8 zzOrder[64] = {
     0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5,

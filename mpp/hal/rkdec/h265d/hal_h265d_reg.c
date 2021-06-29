@@ -37,11 +37,11 @@
 #include "mpp_bitput.h"
 
 #include "mpp_device.h"
+#include "mpp_soc.h"
 #include "cabac.h"
 #include "hal_h265d_reg.h"
 #include "hal_h265d_api.h"
 #include "h265d_syntax.h"
-
 /* #define dump */
 #ifdef dump
 static FILE *fp = NULL;
@@ -1517,9 +1517,7 @@ MPP_RET hal_h265d_start(void *hal, HalTaskInfo *task)
     do {
         MppDevRegWrCfg wr_cfg;
         MppDevRegRdCfg rd_cfg;
-        RK_U32 reg_size = RKVDEC_HEVC_REGISTERS;
-
-        reg_size *= sizeof(RK_U32);
+        RK_U32 reg_size = RKVDEC_HEVC_REGISTERS * sizeof(RK_U32);
 
         wr_cfg.reg = hw_regs;
         wr_cfg.size = reg_size;

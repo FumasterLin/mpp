@@ -922,12 +922,6 @@ MPP_RET hal_jpegd_vdpu2_start(void *hal, HalTaskInfo *task)
     JpegdHalCtx *JpegHalCtx = (JpegdHalCtx *)hal;
     RK_U32 *p_regs = (RK_U32 *)JpegHalCtx->regs;
 
-    // ret = mpp_device_send_reg(JpegHalCtx->dev_ctx, p_regs,
-    //                           sizeof(JpegdIocRegInfo) / sizeof(RK_U32));
-    // if (ret) {
-    //     mpp_err_f("mpp_device_send_reg Failed!!!\n");
-    //     return MPP_ERR_VPUHW;
-    // }
     do {
         MppDevRegWrCfg wr_cfg;
         MppDevRegRdCfg rd_cfg;

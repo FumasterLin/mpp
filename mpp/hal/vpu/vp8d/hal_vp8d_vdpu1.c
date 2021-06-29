@@ -648,10 +648,8 @@ MPP_RET hal_vp8d_vdpu1_wait(void *hal, HalTaskInfo *task)
 {
     MPP_RET ret = MPP_OK;
     VP8DHalContext_t *ctx = (VP8DHalContext_t *)hal;
-    VP8DRegSet_t reg_out;
 
     FUN_T("FUN_IN");
-    memset(&reg_out, 0, sizeof(VP8DRegSet_t));
 
     ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_POLL, NULL);
     if (ret)

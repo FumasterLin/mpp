@@ -605,8 +605,9 @@ RK_S32 check_slice_size(void *hal, HalTaskInfo *task)
     H264eHalContext *ctx = (H264eHalContext *)hal;
     h264e_hal_vpu_buffers *bufs = (h264e_hal_vpu_buffers *)ctx->buffers;
     H264eHwCfg *hw_cfg = &ctx->hw_cfg;
-    MppEncPrepCfg *prep = &ctx->set->prep;
-    RcSyntax *rc_syn = (RcSyntax *)task->enc.syntax.data;
+    // MppEncPrepCfg *prep = &ctx->set->prep;
+    // RcSyntax *rc_syn = (RcSyntax *)task->enc.syntax.data;
+    (void)task;
     RK_U32 *base = mpp_buffer_get_ptr(bufs->hw_nal_size_table_buf);
     RK_U32 i;
     RK_U32 exceed_cnt = 0;
@@ -635,7 +636,7 @@ void h264e_check_reencode(void *hal, HalTaskInfo *task, void *reg_out,
                           MPP_RET (*feedback)(h264e_feedback* fb, void * reg))
 {
     H264eHalContext *ctx = (H264eHalContext *)hal;
-    h264e_hal_vpu_buffers *bufs = (h264e_hal_vpu_buffers *)ctx->buffers;
+    // h264e_hal_vpu_buffers *bufs = (h264e_hal_vpu_buffers *)ctx->buffers;
     h264e_feedback *fb = &ctx->feedback;
     RcSyntax *rc_syn = (RcSyntax *)task->enc.syntax.data;
     H264eHwCfg *hw_cfg = &ctx->hw_cfg;
@@ -653,7 +654,7 @@ void h264e_check_reencode(void *hal, HalTaskInfo *task, void *reg_out,
         int re_qp = hw_cfg->qp;
         RK_S32 re_max_bits = 0, re_min_bits = 0;
         RK_S32 re_min_qp = 1, re_max_qp = 60;
-        if (fb->out_strm_size * 8 > rc_syn->bit_target) {
+        if (fb->out_strm_size * 8 > (RK_U32)rc_syn->bit_target) {
             re_max_bits = fb->out_strm_size * 8;
             re_min_qp = hw_cfg->qp;
         } else {

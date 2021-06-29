@@ -456,7 +456,7 @@ MPP_RET vdpu1_mpg4d_wait(void *hal, HalTaskInfo *task)
     MPP_RET ret = MPP_OK;
     hal_mpg4_ctx *ctx = (hal_mpg4_ctx *)hal;
     M4vdVdpu1Regs_t reg_out;
-    RK_U32* regs = (RK_U32 *)&reg_out;
+    RK_U32* regs = (RK_U32 *)ctx->regs;
     RK_U32 reg_count = (sizeof(reg_out) / sizeof(RK_U32));
 
     ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_POLL, NULL);

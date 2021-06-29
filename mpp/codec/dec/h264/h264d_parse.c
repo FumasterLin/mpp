@@ -538,7 +538,7 @@ MPP_RET parse_prepare(H264dInputCtx_t *p_Inp, H264dCurCtx_t *p_Cur)
     p_Inp->task_valid = 0;
 
     //!< check eos
-    if (p_Inp->pkt_eos) {
+    if (p_Inp->pkt_eos && !p_Inp->in_length) {
         FUN_CHECK(ret = store_cur_nalu(p_Cur, &p_Cur->strm, p_Dec->dxva_ctx));
         FUN_CHECK(ret = add_empty_nalu(p_strm));
         p_Dec->p_Inp->task_valid = 1;
@@ -578,7 +578,8 @@ MPP_RET parse_prepare(H264dInputCtx_t *p_Inp, H264dCurCtx_t *p_Cur)
         if (p_strm->endcode_found) {
             p_strm->nalu_len -= START_PREFIX_3BYTE;
             if (p_strm->nalu_len > START_PREFIX_3BYTE) {
-                while (p_strm->nalu_buf[p_strm->nalu_len - 1] == 0x00) {
+                while (p_strm->nalu_len > 0 &&
+                       p_strm->nalu_buf[p_strm->nalu_len - 1] == 0x00) {
                     p_strm->nalu_len--;
                 }
             }
@@ -594,7 +595,12 @@ MPP_RET parse_prepare(H264dInputCtx_t *p_Inp, H264dCurCtx_t *p_Cur)
         p_strm->nalu_offset = 0;
         p_Dec->nalu_ret = HaveNoStream;
     }
-
+    if (p_Inp->pkt_eos) {
+        FUN_CHECK(ret = store_cur_nalu(p_Cur, p_strm, p_Dec->dxva_ctx));
+        FUN_CHECK(ret = add_empty_nalu(p_strm));
+        p_Dec->p_Inp->task_valid = 1;
+        p_Dec->p_Inp->task_eos = 1;
+    }
 __RETURN:
 
     return ret = MPP_OK;

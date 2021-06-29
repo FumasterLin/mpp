@@ -25,7 +25,7 @@ set_target_properties(mpp_hal PROPERTIES FOLDER "mpp/hal")
 # add hardware worker implement
 # ----------------------------------------------------------------------------
 # add_subdirectory(worker/mpp_device)
-add_subdirectory(worker/libv4l2)
+# add_subdirectory(worker/libv4l2)
 
 target_link_libraries(mpp_hal
                       ${HAL_AVSD}

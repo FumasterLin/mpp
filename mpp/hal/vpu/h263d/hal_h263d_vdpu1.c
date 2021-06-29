@@ -286,7 +286,7 @@ MPP_RET hal_vpu1_h263d_wait(void *hal, HalTaskInfo *task)
     MPP_RET ret = MPP_OK;
     hal_h263_ctx *ctx = (hal_h263_ctx *)hal;
     Vpu1H263dRegSet_t reg_out;
-    RK_U32* regs = (RK_U32 *)&reg_out;
+    RK_U32* regs = (RK_U32 *)ctx->regs;
     RK_U32 reg_count = (sizeof(reg_out) / sizeof(RK_U32));
 
     ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_CMD_POLL, NULL);

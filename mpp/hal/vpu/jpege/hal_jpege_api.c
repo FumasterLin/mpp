@@ -83,7 +83,6 @@ static MPP_RET hal_jpege_init(void *hal, MppHalCfg *cfg)
     HalJpegeCtx *ctx = (HalJpegeCtx *)hal;
     MppHalApi   *p_api = NULL;
 
-    VpuHardMode hard_mode = MODE_NULL;
     RK_U32 hw_flag = 0;
 
     if (ctx == NULL)
@@ -92,20 +91,8 @@ static MPP_RET hal_jpege_init(void *hal, MppHalCfg *cfg)
 
     p_api = &ctx->hal_api;
 
-    // NOTE: rk3036 and rk3228 do NOT have jpeg encoder
-    if (NULL == mpp_get_vcodec_dev_name(MPP_CTX_ENC, MPP_VIDEO_CodingMJPEG)) {
-        mpp_err("SOC %s do NOT support jpeg encoding\n", mpp_get_soc_name());
-        return MPP_ERR_INIT;
-    }
-
     hw_flag = mpp_get_vcodec_type();
-    if (hw_flag & HAVE_VDPU2)
-        hard_mode = VDPU2_MODE;
-    if (hw_flag & HAVE_VDPU1)
-        hard_mode = VDPU1_MODE;
-
-    switch (hard_mode) {
-    case VDPU2_MODE:
+    if (hw_flag & HAVE_VEPU2) {
         p_api->init    = hal_jpege_vepu2_init;
         p_api->deinit  = hal_jpege_vepu2_deinit;
         p_api->reg_gen = hal_jpege_vepu2_gen_regs;
@@ -114,8 +101,7 @@ static MPP_RET hal_jpege_init(void *hal, MppHalCfg *cfg)
         p_api->reset   = hal_jpege_vepu2_reset;
         p_api->flush   = hal_jpege_vepu2_flush;
         p_api->control = hal_jpege_vepu2_control;
-        break;
-    case VDPU1_MODE:
+    } else if (hw_flag & HAVE_VEPU1) {
         p_api->init    = hal_jpege_vepu1_init;
         p_api->deinit  = hal_jpege_vepu1_deinit;
         p_api->reg_gen = hal_jpege_vepu1_gen_regs;
@@ -124,11 +110,8 @@ static MPP_RET hal_jpege_init(void *hal, MppHalCfg *cfg)
         p_api->reset   = hal_jpege_vepu1_reset;
         p_api->flush   = hal_jpege_vepu1_flush;
         p_api->control = hal_jpege_vepu1_control;
-        break;
-    default:
+    } else
         return MPP_ERR_INIT;
-        break;
-    }
 
     return p_api->init(ctx, cfg);
 }

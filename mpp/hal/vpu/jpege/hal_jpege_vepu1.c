@@ -465,14 +465,13 @@ MPP_RET hal_jpege_vepu1_start(void *hal, HalTaskInfo *task)
     memcpy(cache + reg_num, &(ctx->ioctl_info.extra_info), extra_size);
 
     if (ctx->dev_ctx) {
-        // ret = mpp_device_send_reg(ctx->dev_ctx, cache, reg_num + extra_num);
         do {
             MppDevRegWrCfg wr_cfg;
             MppDevRegRdCfg rd_cfg;
-            RK_U32 reg_size = reg_size + extra_size;//ctx->reg_size;
+            RK_U32 size = reg_size + extra_size;//ctx->reg_size;
 
-            wr_cfg.reg = cache;
-            wr_cfg.size = reg_size;
+            wr_cfg.reg = ctx->ioctl_info.regs;
+            wr_cfg.size = size;
             wr_cfg.offset = 0;
 
             ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_WR, &wr_cfg);
@@ -481,8 +480,8 @@ MPP_RET hal_jpege_vepu1_start(void *hal, HalTaskInfo *task)
                 break;
             }
 
-            rd_cfg.reg = cache;
-            rd_cfg.size = reg_size;
+            rd_cfg.reg = ctx->ioctl_info.regs;
+            rd_cfg.size = size;
             rd_cfg.offset = 0;
 
             ret = mpp_dev_ioctl(ctx->dev_ctx, MPP_DEV_REG_RD, &rd_cfg);

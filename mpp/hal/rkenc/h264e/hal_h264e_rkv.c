@@ -1572,11 +1572,11 @@ static MPP_RET h264e_rkv_resend(H264eHalContext *ctx, RK_S32 mb_rc)
     unsigned int k = 0;
     H264eRkvIoctlInput *ioctl_info = (H264eRkvIoctlInput *)ctx->ioctl_input;
     H264eRkvRegSet *reg_list = (H264eRkvRegSet *)ctx->regs;
-    RK_S32 length;
+    // RK_S32 length;
     MppEncPrepCfg *prep = &ctx->cfg->prep;
     RK_S32 num_mb = MPP_ALIGN(prep->width, 16)
                     * MPP_ALIGN(prep->height, 16) / 16 / 16;
-    H264eRkvIoctlOutput *reg_out = (H264eRkvIoctlOutput *)ctx->ioctl_output;
+    // H264eRkvIoctlOutput *reg_out = (H264eRkvIoctlOutput *)ctx->ioctl_output;
     h264e_feedback *fb = &ctx->feedback;
     RK_S32 hw_ret = 0;
 
@@ -1589,10 +1589,10 @@ static MPP_RET h264e_rkv_resend(H264eHalContext *ctx, RK_S32 mb_rc)
         memcpy(&ioctl_info->reg_info[k].regs,
                &reg_list[k], sizeof(H264eRkvRegSet));
 
-    length = (sizeof(ioctl_info->enc_mode) +
-              sizeof(ioctl_info->frame_num) +
-              sizeof(ioctl_info->reg_info[0]) *
-              ioctl_info->frame_num) >> 2;
+    // length = (sizeof(ioctl_info->enc_mode) +
+    //           sizeof(ioctl_info->frame_num) +
+    //           sizeof(ioctl_info->reg_info[0]) *
+    //           ioctl_info->frame_num) >> 2;
 
     // hw_ret = mpp_device_send_reg(ctx->dev_ctx, (RK_U32 *)ioctl_info, length);
     // if (hw_ret) {

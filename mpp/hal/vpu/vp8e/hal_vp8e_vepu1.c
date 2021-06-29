@@ -368,13 +368,6 @@ MPP_RET hal_vp8e_vepu1_start(void *hal, HalTaskInfo *task)
     MPP_RET ret = MPP_OK;
     HalVp8eCtx *ctx = (HalVp8eCtx *)hal;
 
-    // ret = mpp_device_send_reg(ctx->dev_ctx, (RK_U32 *)ctx->regs, ctx->reg_size);
-    // if (ret) {
-    //     mpp_err("failed to send regs to kernel!!!\n");
-    // } else {
-    //     vp8e_hal_dbg(VP8E_DBG_HAL_FUNCTION, "mpp_device_send_reg success.\n");
-    // }
-
     do {
         MppDevRegWrCfg wr_cfg;
         MppDevRegRdCfg rd_cfg;

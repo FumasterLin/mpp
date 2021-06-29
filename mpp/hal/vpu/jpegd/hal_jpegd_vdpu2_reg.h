@@ -17,8 +17,6 @@
 #ifndef __HAL_JPEGD_VDPU2_REG_H__
 #define __HAL_JPEGD_VDPU2_REG_H__
 
-#include "mpp_device_patch.h"
-
 #define JPEGD_REG_NUM                         (159)
 
 #define DEC_MODE_JPEG                         (3)

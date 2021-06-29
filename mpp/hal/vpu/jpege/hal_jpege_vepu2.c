@@ -444,7 +444,6 @@ MPP_RET hal_jpege_vepu2_start(void *hal, HalTaskInfo *task)
     memcpy(cache + reg_num, &(ctx->ioctl_info.extra_info), extra_size);
 
     if (ctx->dev_ctx) {
-        // ret = mpp_device_send_reg(ctx->dev_ctx, cache, reg_num + extra_num);
         do {
             MppDevRegWrCfg wr_cfg;
             MppDevRegRdCfg rd_cfg;
